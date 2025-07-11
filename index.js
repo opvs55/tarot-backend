@@ -29,30 +29,41 @@ app.post('/api/tarot', async (req, res) => {
     console.log("LOG: Requisição recebida em /api/tarot com o corpo:", req.body);
     const { question, cards } = req.body;
 
-    if (!question || !cards || !Array.isArray(cards)) {
-      return res.status(400).json({ error: 'Dados inválidos. É necessário enviar "question" e "cards".' });
+    if (!question || !cards || !Array.isArray(cards) || cards.length !== 10) {
+      return res.status(400).json({ error: 'Dados inválidos. Pergunta e 10 cartas são necessárias.' });
     }
 
+    // PROMPT ATUALIZADO: Pedimos a análise geral E as análises individuais
     const prompt = `
       Aja como uma cartomante experiente e sábia. A pergunta do consulente é: "${question}".
       A tiragem da Cruz Celta resultou nas seguintes cartas:
       ${cards.map((card, index) => `- Posição ${index + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
-      Forneça uma análise coesa e profunda, conectando as cartas com a pergunta. Ofereça conselhos e reflexões.
+
+      Sua tarefa é fornecer duas coisas em sua resposta, separadas por '----':
+      1.  PRIMEIRO, escreva uma análise geral, coesa e profunda, conectando as cartas com a pergunta.
+      2.  DEPOIS, escreva a linha '----'.
+      3.  APÓS a linha, forneça uma análise curta e direta (uma ou duas frases) para CADA UMA das 10 cartas, na ordem em que apareceram. Separe a análise de cada carta com um ponto e vírgula ';'. Não inclua o nome da carta, apenas a análise.
     `;
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    const interpretation = response.text();
+    const response = await result.response;
+    const rawText = response.text();
 
-    res.status(200).json({ interpretation });
+    // Processando a resposta para separar a análise geral das individuais
+    const parts = rawText.split('----');
+    const mainInterpretation = parts[0] ? parts[0].trim() : "Não foi possível gerar a interpretação principal.";
+    const cardInterpretationsRaw = parts[1] ? parts[1].trim() : "";
+    const cardInterpretations = cardInterpretationsRaw.split(';').map(text => text.trim());
+
+    // Enviamos um objeto JSON mais rico para o frontend
+    res.status(200).json({ mainInterpretation, cardInterpretations });
 
   } catch (error) {
     console.error("LOG: Erro no endpoint /api/tarot:", error);
     res.status(500).json({ error: 'Falha ao processar a leitura do Tarot.' });
   }
 });
-
 // 6. Iniciando o servidor
 app.listen(PORT, () => {
   console.log(`✨ Servidor do Oráculo de Tarot rodando em http://localhost:${PORT}`);
