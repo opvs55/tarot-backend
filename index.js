@@ -45,7 +45,7 @@ app.post('/api/tarot', async (req, res) => {
       3.  APÓS a linha, forneça uma análise curta e direta (uma ou duas frases) para CADA UMA das 10 cartas, na ordem em que apareceram. Separe a análise de cada carta com um ponto e vírgula ';'. Não inclua o nome da carta, apenas a análise.
     `;
 
-    const model = genAI.getGenerativeModel({ model: "ggemini-2.0-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const rawText = response.text();
