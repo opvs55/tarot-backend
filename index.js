@@ -95,6 +95,36 @@ app.post('/api/tarot/chat', async (req, res) => {
     res.status(500).json({ error: 'Falha ao processar a mensagem do chat.' });
   }
 });
+
+
+app.post('/api/tarot/card-meaning', async (req, res) => {
+  try {
+    console.log("LOG: Requisição recebida em /api/tarot/card-meaning:", req.body);
+    const { cardName, cardOrientation, positionName } = req.body;
+
+    if (!cardName || !cardOrientation || !positionName) {
+      return res.status(400).json({ error: 'Dados da carta, orientação e posição são necessários.' });
+    }
+
+    const prompt = `
+      Aja como um professor de Tarot experiente.
+      Explique de forma didática, clara e concisa o que a carta "${cardName}" (${cardOrientation}) significa arquetipicamente quando aparece na posição "${positionName}" de uma tiragem de Cruz Celta.
+      Foque apenas no significado geral da combinação carta/posição. Não mencione nenhuma pergunta específica do consulente.
+      Sua resposta deve ter no máximo 2 ou 3 frases.
+    `;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const didacticText = response.text();
+
+    res.status(200).json({ didacticText });
+
+  } catch (error) {
+    console.error("LOG: Erro no endpoint /api/tarot/card-meaning:", error);
+    res.status(500).json({ error: 'Falha ao obter significado da carta.' });
+  }
+});
 // 6. Iniciando o servidor
 app.listen(PORT, () => {
   console.log(`✨ Servidor do Oráculo de Tarot rodando em http://localhost:${PORT}`);
