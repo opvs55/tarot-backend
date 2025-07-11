@@ -83,7 +83,7 @@ app.post('/api/tarot/chat', async (req, res) => {
       Responda à pergunta do consulente de forma clara, empática e concisa, mantendo seu papel de cartomante e se baseando estritamente no contexto fornecido. Não invente novas informações.
     `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
     const result = await model.generateContent(prompt);
     const response = result.response;
     const aiResponse = response.text();
