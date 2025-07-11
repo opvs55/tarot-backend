@@ -64,6 +64,37 @@ app.post('/api/tarot', async (req, res) => {
     res.status(500).json({ error: 'Falha ao processar a leitura do Tarot.' });
   }
 });
+
+app.post('/api/tarot/chat', async (req, res) => {
+  try {
+    console.log("LOG: Requisição recebida em /api/tarot/chat:", req.body);
+    const { userMessage, chatContext } = req.body;
+
+    if (!userMessage || !chatContext) {
+      return res.status(400).json({ error: 'Mensagem e contexto do chat são necessários.' });
+    }
+
+    const prompt = `
+      Você é uma cartomante sábia que acabou de realizar uma leitura de Tarot para um consulente.
+      O CONTEXTO DA LEITURA É: "${chatContext}".
+
+      O consulente agora tem uma dúvida sobre a leitura. A pergunta dele é: "${userMessage}".
+
+      Responda à pergunta do consulente de forma clara, empática e concisa, mantendo seu papel de cartomante e se baseando estritamente no contexto fornecido. Não invente novas informações.
+    `;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const aiResponse = response.text();
+
+    res.status(200).json({ aiResponse });
+
+  } catch (error) {
+    console.error("LOG: Erro no endpoint /api/tarot/chat:", error);
+    res.status(500).json({ error: 'Falha ao processar a mensagem do chat.' });
+  }
+});
 // 6. Iniciando o servidor
 app.listen(PORT, () => {
   console.log(`✨ Servidor do Oráculo de Tarot rodando em http://localhost:${PORT}`);
