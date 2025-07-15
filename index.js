@@ -46,7 +46,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Uma pequena melhoria: definimos o nome do modelo uma vez para usar em todas as rotas.
 // Usei o nome oficial mais recente para garantir estabilidade.
-const geminiModel = ""gemini-2.5-flash-lite-preview-06-17"";
+const geminiModel = "gemini-2.5-flash-lite-preview-06-17";
 
 
 // ===================================================================
