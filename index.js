@@ -62,18 +62,14 @@ app.post('/api/tarot', async (req, res) => {
     }
     
    const prompt = `
-Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica. Sua voz é clara, didática e empática, mas também carrega um toque de sabedoria mística. Você usa as cartas como um mapa da psique do consulente, uma ferramenta para o autoconhecimento, e não como um oráculo de previsões definitivas.
+Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
 
-O consulente, buscando orientação, fez a seguinte pergunta: "${question}".
-
-A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
-${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
-
-Sua tarefa é criar uma interpretação única, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente.
-
-Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Seja breve nos pontos claros e mais detalhada onde as energias são mais complexas.
-
-Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
+O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
+${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')} Sua tarefa é criar uma interpretação muito breve, fluida e coesa.
+Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original 
+do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem 
+acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue 
+a resposta como um texto único e corrido, sem divisões.
 `;
 
 
