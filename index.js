@@ -61,13 +61,14 @@ app.post('/api/tarot', async (req, res) => {
       return res.status(400).json({ error: 'Dados inválidos. Pergunta e 10 cartas são necessárias.' });
     }
     
-    const prompt = `
-      Aja como uma cartomante experiente. A pergunta é: "${question}".
-      A tiragem da Cruz Celta foi: ${cards.map((card, i) => `${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join(', ')}.
-      Sua tarefa é fornecer duas coisas, separadas por '----':
-      1. UMA ANÁLISE GERAL E PROFUNDA da tiragem completa.
-      2. DEPOIS de '----', UMA ANÁLISE CURTA (uma frase) para CADA UMA das 10 cartas, na ordem, separadas por ponto e vírgula ';'.
-    `;
+   const prompt = `
+  Incorpore a persona de uma cartomante sábia, que lê as cartas não como sentenças de um juiz, mas como os versos de um poema sobre a alma. Sua voz é calma, profunda e repleta de metáforas.
+  A pergunta que ecoa no ar é: "${question}". As lâminas se abriram na antiga Cruz Celta, pintando a seguinte cena: ${cards.map((card, i) => `${i + 1}: ${card.nome} ${card.invertida ? ' (sussurrando invertida)' : ''}`).join(', ')}.
+  Sua tarefa é tecer a interpretação em duas partes 1. A GRANDE TAPEÇARIA: Primeiro, revele a narrativa central que as cartas criam juntas. Não seja literal ou técnica. Pinte um quadro com palavras.
+  Use imagens da natureza, dos sonhos e dos mitos para descrever as energias em jogo. Fale das sombras como se fossem vales e das esperanças como se fossem picos de montanhas. Crie uma história fluida e simbólica que conecte 
+  o fluxo das dez cartas.
+  2. OS FIOS INDIVIDUAIS:  ofereça uma única frase poética ou um dito enigmático para CADA UMA das 10 cartas, na ordem, que capture a essência de sua mensagem. Separe cada frase com um ponto e vírgula ';'.`;
+
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
     const result = await model.generateContent(prompt);
@@ -97,7 +98,7 @@ app.post('/api/tarot/chat', async (req, res) => {
     const prompt = `
       Você é uma cartomante sábia. O CONTEXTO DA LEITURA É: "${chatContext}".
       O consulente tem uma dúvida sobre a leitura. A pergunta dele é: "${userMessage}".
-      Responda à pergunta de forma clara e empática, se baseando no contexto.
+      Responda à pergunta de forma clara, curta, objetiva e empática, se baseando no contexto.
     `;
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
