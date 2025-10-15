@@ -10,11 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // 3. Configuração de CORS (Cross-Origin Resource Sharing)
-// Usando a sua configuração que permite múltiplas origens
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://oraculo-front-2-0.vercel.app' // A sua URL de produção que você definiu
+  'https://oraculo-front-2-0.vercel.app'
 ];
 
 const corsOptions = {
@@ -29,11 +28,8 @@ const corsOptions = {
   allowedHeaders: ['Content-Type'],
 };
 
-// Middleware para aplicar as opções de CORS
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-
-// Middleware para o servidor entender o formato JSON
 app.use(express.json());
 
 // 4. Configuração do Cliente Gemini
@@ -43,42 +39,59 @@ if (!API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Uma pequena melhoria: definimos o nome do modelo uma vez para usar em todas as rotas.
-// Usei o nome oficial mais recente para garantir estabilidade.
-const geminiModel = "gemini-2.5-flash-lite-preview-06-17";
+const geminiModel = "gemini-1.5-flash-latest"; // Modelo atualizado para o mais recente estável
 
 
 // ===================================================================
 // ------------------------- NOSSAS ROTAS DE API ---------------------
 // ===================================================================
 
-// ROTA 1: Para gerar a leitura principal completa
+// ROTA 1: Para gerar a leitura principal completa (COM AS ALTERAÇÕES)
 app.post('/api/tarot', async (req, res) => {
   try {
-    const { question, cards } = req.body;
-    if (!question || !cards || !Array.isArray(cards) || cards.length !== 10) {
-      return res.status(400).json({ error: 'Dados inválidos. Pergunta e 10 cartas são necessárias.' });
+    // ALTERAÇÃO 1: Recebemos o 'spreadType' do frontend
+    const { question, cards, spreadType } = req.body;
+
+    // ALTERAÇÃO 2: A validação agora é mais flexível
+    if (!question || !cards || !Array.isArray(cards) || cards.length === 0) {
+      return res.status(400).json({ error: 'Dados inválidos. Pergunta e cartas são necessárias.' });
     }
     
-   const prompt = `
-Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
-
-O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
-${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')} Sua tarefa é criar uma interpretação muito breve, fluida e coesa.
-Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original 
-do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem 
-acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue 
-a resposta como um texto único e corrido, sem divisões.
+    // ALTERAÇÃO 3: O prompt para a IA agora é gerado dinamicamente
+    let prompt;
+    switch (spreadType) {
+      case 'threeCards':
+        prompt = `
+Aja como uma taróloga experiente com uma abordagem psicológica e terapêutica.
+O consulente fez a seguinte pergunta: "${question}".
+A tiragem de 3 cartas (Passado, Presente, Futuro) revelou:
+- Passado: ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+- Presente: ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+- Futuro: ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+Crie uma interpretação fluida e coesa, conectando a energia de cada carta à sua posição no tempo e à pergunta original. Foque nos aspectos psicológicos e nos potenciais de crescimento. Use uma linguagem acessível e inspiradora. Entregue a resposta como um texto único e corrido.
 `;
+        break;
 
+      case 'celticCross':
+      default: // Se o spreadType não for reconhecido, assume a Cruz Celta
+        prompt = `
+Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
+O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
+${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
+Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
+`;
+        break;
+    }
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
     const result = await model.generateContent(prompt);
-    const rawText = result.response.text();
+    // Usamos um método mais seguro para extrair o texto, caso a resposta não venha como esperado
+    const rawText = result.response.text ? result.response.text() : "A IA não forneceu uma resposta em texto.";
 
+    // A lógica de separação da resposta pode ser simplificada, a IA pode retornar um JSON.
+    // Por enquanto, mantemos a sua lógica original de split.
     const parts = rawText.split('----');
-    const mainInterpretation = parts[0] ? parts[0].trim() : "Não foi possível gerar a interpretação principal.";
+    const mainInterpretation = parts[0] ? parts[0].trim() : rawText; // Se não houver '----', usa o texto todo.
     const cardInterpretationsRaw = parts[1] ? parts[1].trim() : "";
     const cardInterpretations = cardInterpretationsRaw.split(';').map(text => text.trim());
     
@@ -90,7 +103,7 @@ a resposta como um texto único e corrido, sem divisões.
   }
 });
 
-// ROTA 2: Para o chat de diálogo sobre uma leitura (RESTAURADA)
+// ROTA 2: Para o chat de diálogo sobre uma leitura
 app.post('/api/tarot/chat', async (req, res) => {
   try {
     const { userMessage, chatContext } = req.body;
@@ -116,7 +129,7 @@ app.post('/api/tarot/chat', async (req, res) => {
   }
 });
 
-// ROTA 3: Para o significado didático de uma carta/posição (RESTAURADA)
+// ROTA 3: Para o significado didático de uma carta/posição
 app.post('/api/tarot/card-meaning', async (req, res) => {
   try {
     const { cardName, cardOrientation, positionName } = req.body;
