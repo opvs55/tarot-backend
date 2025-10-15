@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+
 // Configuração inicial (sem alterações)
 dotenv.config();
 const app = express();
