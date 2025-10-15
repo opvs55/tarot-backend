@@ -1,4 +1,4 @@
-// Arquivo do seu backend (index.js ou server.js) - VERSÃO COM LIMPEZA DE JSON
+// Arquivo do seu backend (index.js ou server.js) - VERSÃO FINAL COM EXTRATOR DE JSON
 
 import express from 'express';
 import cors from 'cors';
@@ -36,7 +36,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
-const geminiModel = "gemini-2-flash";
+const geminiModel = "gemini-pro";
 
 
 // ===================================================================
@@ -54,59 +54,13 @@ app.post('/api/tarot', async (req, res) => {
     let prompt;
     if (spreadType === 'threeCards') {
       prompt = `
-      Você é uma taróloga sábia e intuitiva. Sua tarefa é analisar uma pergunta e escolher o melhor método de leitura de 3 cartas para respondê-la, e depois realizar a interpretação.
-
-      1.  **ANÁLISE DA PERGUNTA:**
-          A pergunta do consulente é: "${question}"
-
-      2.  **ESCOLHA DO MÉTODO:**
-          Baseado na pergunta, escolha UM dos seguintes contextos para a leitura de 3 cartas:
-          - ["Passado", "Presente", "Futuro"]: Para questões sobre desenvolvimento temporal, causas e consequências.
-          - ["Situação", "Obstáculo", "Conselho"]: Para problemas atuais e busca por orientação prática.
-          - ["Mente", "Corpo", "Espírito"]: Para questões de autoconhecimento e equilíbrio interno.
-          - ["Você", "A outra pessoa", "A Relação"]: Para questões sobre relacionamentos.
-
-      3.  **CARTAS SORTEADAS:**
-          As 3 cartas sorteadas foram:
-          - Carta 1: ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
-          - Carta 2: ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
-          - Carta 3: ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
-
-      4.  **TAREFA FINAL:**
-          Agora, retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra (como ```json), seguindo esta estrutura:
-          {
-            "contexto_escolhido": {
-              "titulo": "O nome do método que você escolheu (ex: Situação, Obstáculo, Conselho)",
-              "posicoes": ["Nome da Posição 1", "Nome da Posição 2", "Nome da Posição 3"]
-            },
-            "interpretacao": {
-              "titulo_leitura": "Crie um título poético e impactante para esta leitura específica.",
-              "resumo": "Escreva um parágrafo curto e direto que resuma a mensagem central das cartas.",
-              "analise_cartas": [
-                {
-                  "posicao": "Nome da Posição 1",
-                  "texto": "Analise a primeira carta dentro do significado desta posição, conectando com a pergunta do consulente."
-                },
-                {
-                  "posicao": "Nome da Posição 2",
-                  "texto": "Analise a segunda carta dentro do significado desta posição, conectando com a pergunta do consulente."
-                },
-                {
-                  "posicao": "Nome da Posição 3",
-                  "texto": "Analise a terceira carta dentro do significado desta posição, conectando com a pergunta do consulente."
-                }
-              ],
-              "conselho_final": "Conclua com um parágrafo de conselho prático e inspirador para o consulente."
-            }
-          }
+      Você é uma taróloga sábia e intuitiva... (PROMPT COMPLETO PARA 3 CARTAS AQUI)
+      ...retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra...
       `;
-    } else {
+    } else { 
       prompt = `
-Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
-O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
-${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
-Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
-`;
+      Aja como uma taróloga experiente... (PROMPT COMPLETO DA CRUZ CELTA AQUI)
+      `;
     }
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
@@ -115,14 +69,22 @@ Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a j
     
     if (spreadType === 'threeCards') {
       try {
-        // AQUI ESTÁ A CORREÇÃO: Limpamos o texto antes de fazer o parse.
-        const cleanedText = rawText.replace(/^```json\s*|```$/g, '');
-        const jsonData = JSON.parse(cleanedText);
+        // AQUI ESTÁ A NOVA LÓGICA ROBUSTA
+        const startIndex = rawText.indexOf('{');
+        const endIndex = rawText.lastIndexOf('}');
+        
+        if (startIndex === -1 || endIndex === -1) {
+          throw new Error("Objeto JSON não encontrado na resposta da IA.");
+        }
+        
+        const jsonString = rawText.substring(startIndex, endIndex + 1);
+        const jsonData = JSON.parse(jsonString);
         
         res.status(200).json({ interpretationType: 'structured', data: jsonData });
+
       } catch (e) {
-        console.error("LOG: A IA não retornou um JSON válido.", rawText);
-        res.status(200).json({ interpretationType: 'simple', data: { mainInterpretation: "Ocorreu um erro ao formatar a resposta da IA. Tente novamente.", cardInterpretations: [] } });
+        console.error("LOG: Falha ao extrair ou fazer parse do JSON.", { error: e.message, rawText });
+        res.status(200).json({ interpretationType: 'simple', data: { mainInterpretation: "Ocorreu um erro ao formatar a resposta da IA. O texto original é: " + rawText, cardInterpretations: [] } });
       }
     } else {
       const parts = rawText.split('----');
@@ -138,8 +100,5 @@ Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a j
   }
 });
 
-// Outras rotas (sem alterações)
-// ...
 
-// "Ligando" o servidor (sem alterações)
-// ...
+// ... RESTANTE DO SEU CÓDIGO (ROTAS /chat, /card-meaning e app.listen) ...
