@@ -1,10 +1,9 @@
-// Arquivo do seu backend (index.js ou server.js) - VERSÃO "ORÁCULO SÁBIO"
+// Arquivo do seu backend (index.js ou server.js) - VERSÃO COM LIMPEZA DE JSON
 
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
 
 // Configuração inicial (sem alterações)
 dotenv.config();
@@ -37,7 +36,8 @@ if (!API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
-const geminiModel = "gemini-2.5-flash";
+const geminiModel = "gemini-2-flash";
+
 
 // ===================================================================
 // ------------------------- NOSSAS ROTAS DE API ---------------------
@@ -52,8 +52,6 @@ app.post('/api/tarot', async (req, res) => {
     }
     
     let prompt;
-    // O sistema agora só gera JSON para tiragens de 3 cartas, mantendo o texto simples para a Cruz Celta.
-    // Isso nos dá flexibilidade e mantém o que já funcionava.
     if (spreadType === 'threeCards') {
       prompt = `
       Você é uma taróloga sábia e intuitiva. Sua tarefa é analisar uma pergunta e escolher o melhor método de leitura de 3 cartas para respondê-la, e depois realizar a interpretação.
@@ -75,7 +73,7 @@ app.post('/api/tarot', async (req, res) => {
           - Carta 3: ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
 
       4.  **TAREFA FINAL:**
-          Agora, retorne sua resposta EXCLUSIVAMENTE em formato JSON, seguindo esta estrutura:
+          Agora, retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra (como ```json), seguindo esta estrutura:
           {
             "contexto_escolhido": {
               "titulo": "O nome do método que você escolheu (ex: Situação, Obstáculo, Conselho)",
@@ -102,27 +100,29 @@ app.post('/api/tarot', async (req, res) => {
             }
           }
       `;
-    } else { // Mantém a lógica antiga para a Cruz Celta
+    } else {
       prompt = `
-      Aja como uma taróloga experiente... (seu prompt original da Cruz Celta aqui, sem alterações)
-      `;
+Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
+O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
+${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
+Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
+`;
     }
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
     
-    // A IA agora nos devolve uma string JSON, então precisamos fazer o "parse".
-    // Ou, se for a Cruz Celta, ela devolve o texto antigo.
     if (spreadType === 'threeCards') {
       try {
-        const jsonData = JSON.parse(rawText);
-        // Retornamos um objeto com uma flag para o frontend saber como tratar.
+        // AQUI ESTÁ A CORREÇÃO: Limpamos o texto antes de fazer o parse.
+        const cleanedText = rawText.replace(/^```json\s*|```$/g, '');
+        const jsonData = JSON.parse(cleanedText);
+        
         res.status(200).json({ interpretationType: 'structured', data: jsonData });
       } catch (e) {
-        // Se a IA não retornar um JSON válido, enviamos o texto bruto para não quebrar.
         console.error("LOG: A IA não retornou um JSON válido.", rawText);
-        res.status(200).json({ interpretationType: 'simple', data: { mainInterpretation: rawText, cardInterpretations: [] } });
+        res.status(200).json({ interpretationType: 'simple', data: { mainInterpretation: "Ocorreu um erro ao formatar a resposta da IA. Tente novamente.", cardInterpretations: [] } });
       }
     } else {
       const parts = rawText.split('----');
@@ -138,12 +138,8 @@ app.post('/api/tarot', async (req, res) => {
   }
 });
 
+// Outras rotas (sem alterações)
+// ...
 
-// As outras rotas (/chat, /card-meaning) continuam iguais
-// ... (resto do seu código do backend sem alterações) ...
-
-
-// "Ligando" o servidor
-app.listen(PORT, () => {
-  console.log(`✨ Servidor do Oráculo de Tarot rodando em http://localhost:${PORT}`);
-});
+// "Ligando" o servidor (sem alterações)
+// ...
