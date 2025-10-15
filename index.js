@@ -39,7 +39,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
-const geminiModel = "gemini-1.5-flash-latest"; // Modelo atualizado para o mais recente estável
+const geminiModel = "gemini-2.5-flash"; // Modelo atualizado para o mais recente estável
 
 
 // ===================================================================
