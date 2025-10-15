@@ -1,5 +1,3 @@
-// Arquivo do seu backend (index.js ou server.js) - VERSÃO 100% COMPLETA
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -100,13 +98,51 @@ app.post('/api/tarot', async (req, res) => {
             }
           }
       `;
+    } else if (spreadType === 'templeOfAphrodite') {
+      prompt = `
+      Aja como uma taróloga especialista em dinâmicas de relacionamento, com uma abordagem psicológica e empática.
+      A pergunta do consulente é sobre um relacionamento: "${question}".
+      A tiragem "Templo de Afrodite" revelou 7 cartas, representando as duas pessoas na relação.
+
+      **AS CARTAS SORTEADAS SÃO:**
+      - Carta 1 (Sua Atração/Desejo): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+      - Carta 2 (O que Você Sente): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Carta 3 (O que Você Pensa): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      - Carta 4 (Atração/Desejo do Outro): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
+      - Carta 5 (O que o Outro Sente): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
+      - Carta 6 (O que o Outro Pensa): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
+      - Carta 7 (Resultado Final e Conselho): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
+
+      **TAREFA FINAL:**
+      Crie uma análise profunda e coesa. Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra, seguindo esta estrutura:
+      {
+        "titulo_leitura": "Crie um título poético para esta leitura de relacionamento.",
+        "resumo_geral": "Escreva um parágrafo curto que resuma a dinâmica geral entre as duas pessoas revelada pelas cartas.",
+        "analise_voce": {
+          "titulo": "Sua Perspectiva na Relação",
+          "pensamentos": "Analise a carta 3 (O que Você Pensa), conectando-a à pergunta.",
+          "sentimentos": "Analise a carta 2 (O que Você Sente), conectando-a à pergunta.",
+          "desejo": "Analise a carta 1 (Sua Atração/Desejo), conectando-a à pergunta."
+        },
+        "analise_outro": {
+          "titulo": "A Perspectiva do Outro",
+          "pensamentos": "Analise a carta 6 (O que o Outro Pensa) em relação a você.",
+          "sentimentos": "Analise a carta 5 (O que o Outro Sente) em relação a você.",
+          "desejo": "Analise a carta 4 (Atração/Desejo do Outro) em relação a você."
+        },
+        "resultado_conselho": {
+          "titulo": "O Caminho Adiante",
+          "texto": "Analise a carta 7 como a síntese, o resultado provável ou o conselho final para a relação, baseado em todas as outras cartas."
+        }
+      }
+      `;
     } else { 
       prompt = `
 Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
 
 O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
 ${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
-Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
+Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, but que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
 `;
     }
 
@@ -114,7 +150,7 @@ Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a j
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
     
-    if (spreadType === 'threeCards') {
+    if (spreadType === 'threeCards' || spreadType === 'templeOfAphrodite') {
       try {
         const startIndex = rawText.indexOf('{');
         const endIndex = rawText.lastIndexOf('}');
