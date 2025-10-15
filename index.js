@@ -136,13 +136,59 @@ app.post('/api/tarot', async (req, res) => {
         }
       }
       `;
+    } else if (spreadType === 'pathChoice') {
+      prompt = `
+      Aja como uma conselheira sábia e taróloga, guiando uma pessoa em um momento de decisão.
+      O consulente está em dúvida entre dois caminhos:
+      - Caminho 1: "${question.path1}"
+      - Caminho 2: "${question.path2}"
+
+      Foram sorteadas 8 cartas. As 4 primeiras são para o Caminho 1 e as 4 últimas para o Caminho 2.
+
+      **CARTAS PARA O CAMINHO 1 ("${question.path1}"):**
+      - Posição 1 (O que favorece): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+      - Posição 2 (O que precisa ser trabalhado): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Posição 3 (A perspectiva): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      - Posição 4 (O conselho): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
+
+      **CARTAS PARA O CAMINHO 2 ("${question.path2}"):**
+      - Posição 1 (O que favorece): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
+      - Posição 2 (O que precisa ser trabalhado): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
+      - Posição 3 (A perspectiva): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
+      - Posição 4 (O conselho): ${cards[7].nome} ${cards[7].invertida ? '(Invertida)' : ''}
+
+      **TAREFA FINAL:**
+      Crie uma análise comparativa. Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
+      {
+        "titulo_leitura": "Crie um título poético para esta escolha.",
+        "caminho1": {
+          "titulo": "${question.path1}",
+          "analises": [
+            { "posicao": "O que favorece", "texto": "Analise a carta 1 neste contexto." },
+            { "posicao": "O que precisa ser trabalhado", "texto": "Analise a carta 2 neste contexto." },
+            { "posicao": "Perspectiva", "texto": "Analise a carta 3 neste contexto." },
+            { "posicao": "Conselho", "texto": "Analise a carta 4 neste contexto." }
+          ]
+        },
+        "caminho2": {
+          "titulo": "${question.path2}",
+          "analises": [
+            { "posicao": "O que favorece", "texto": "Analise a carta 5 neste contexto." },
+            { "posicao": "O que precisa ser trabalhado", "texto": "Analise a carta 6 neste contexto." },
+            { "posicao": "Perspectiva", "texto": "Analise a carta 7 neste contexto." },
+            { "posicao": "Conselho", "texto": "Analise a carta 8 neste contexto." }
+          ]
+        },
+        "comparativo_final": "Escreva um parágrafo de conclusão que compare as energias dos dois caminhos e ofereça uma síntese ou conselho final para ajudar o consulente na sua decisão, sem dizer a ele qual caminho escolher, mas sim iluminando as qualidades de cada um."
+      }
+      `;
     } else { 
       prompt = `
 Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
 
 O consulente, buscando orientação, fez a seguinte pergunta: "${question}". A tiragem da Cruz Celta revelou as seguintes cartas em suas respectivas posições:
 ${cards.map((card, i) => `- Posição ${i + 1}: ${card.nome} ${card.invertida ? '(Invertida)' : ''}`).join('\n')}
-Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, but que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
+Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a jornada que as cartas apresentam, conectando o significado de cada posição da Cruz Celta com a carta que nela se encontra e, mais importante, com a pergunta original do consulente. Foque nos aspectos psicológicos, nos padrões de comportamento, nos desafios internos e nos potenciais de crescimento que a tiragem sugere. Use uma linguagem acessível e popular, mas que inspire reflexão. Crie uma conexão com o consulente, tratando a leitura como um diálogo introspectivo, sem ser excessivamente familiar. Entregue a resposta como um texto único e corrido, sem divisões.
 `;
     }
 
@@ -150,7 +196,7 @@ Sua tarefa é criar uma interpretação muito breve, fluida e coesa. Analise a j
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
     
-    if (spreadType === 'threeCards' || spreadType === 'templeOfAphrodite') {
+    if (spreadType === 'threeCards' || spreadType === 'templeOfAphrodite' || spreadType === 'pathChoice') {
       try {
         const startIndex = rawText.indexOf('{');
         const endIndex = rawText.lastIndexOf('}');
