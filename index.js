@@ -34,11 +34,11 @@ if (!API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(API_KEY);
-const geminiModel = "gemini-2.5-flash";
+const geminiModel = "gemini-2.5-flash"; 
 
 
 // ===================================================================
-// ----------------- ROTA PRINCIPAL DO TAROT (COM AFRODITE ATUALIZADO) ---
+// ----------------- ROTA PRINCIPAL DO TAROT (CORRIGIDA) -----------------
 // ===================================================================
 
 app.post('/api/tarot', async (req, res) => {
@@ -53,113 +53,77 @@ app.post('/api/tarot', async (req, res) => {
     if (spreadType === 'threeCards') {
       prompt = `
       Você é uma taróloga sábia e intuitiva. Sua tarefa é analisar uma pergunta e escolher o melhor método de leitura de 3 cartas para respondê-la, e depois realizar a interpretação.
-
-      1.  **ANÁLISE DA PERGUNTA:**
-          A pergunta do consulente é: "${question}"
-
-      2.  **ESCOLHA DO MÉTODO:**
-          Baseado na pergunta, escolha UM dos seguintes contextos para a leitura de 3 cartas:
-          - ["Passado", "Presente", "Futuro"]
-          - ["Situação", "Obstáculo", "Conselho"]
-          - ["Mente", "Corpo", "Espírito"]
-          - ["Você", "A outra pessoa", "A Relação"]
-
-      3.  **CARTAS SORTEADAS:**
-          - Carta 1: ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
-          - Carta 2: ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
-          - Carta 3: ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
-
-      4.  **TAREFA FINAL:**
-          Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
-          {
-            "contexto_escolhido": {
-              "titulo": "O nome do método que você escolheu (ex: Situação, Obstáculo, Conselho)",
-              "posicoes": ["Nome da Posição 1", "Nome da Posição 2", "Nome da Posição 3"]
-            },
-            "interpretacao": {
-              "titulo_leitura": "Crie um título poético e impactante para esta leitura específica.",
-              "resumo": "Escreva um parágrafo curto e direto que resuma a mensagem central das cartas.",
-              "analise_cartas": [
-                { "posicao": "Nome da Posição 1", "texto": "Analise a primeira carta nesta posição." },
-                { "posicao": "Nome da Posição 2", "texto": "Analise a segunda carta nesta posição." },
-                { "posicao": "Nome da Posição 3", "texto": "Analise a terceira carta nesta posição." }
-              ],
-              "conselho_final": "Conclua com um parágrafo de conselho prático e inspirador."
-            }
-          }
-      `;
-
-    // <<< MUDANÇA PRINCIPAL AQUI: NOVO PROMPT PARA 'templeOfAphrodite' >>>
-    } else if (spreadType === 'templeOfAphrodite') {
-      // Agora 'question' é um objeto: { name1, name2 }
-      prompt = `
-      Aja como uma taróloga especialista em dinâmicas de relacionamento, com uma abordagem psicológica e empática.
-      A análise é para a relação entre "${question.name1}" e "${question.name2}".
-
-      A tiragem "Templo de Afrodite" revelou 7 cartas, seguindo a estrutura da imagem (1,2,3 para a primeira pessoa; 4,5,6 para a segunda).
-
-      **AS CARTAS SORTEADAS SÃO:**
-
-      --- ANÁLISE DE "${question.name1}" ---
-      - Posição 1 (Pensamentos / Intenções de ${question.name1}): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
-      - Posição 2 (Sentimentos / Emoções de ${question.name1}): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
-      - Posição 3 (Atração Sexual / Física de ${question.name1}): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
-
-      --- ANÁLISE DE "${question.name2}" ---
-      - Posição 4 (Pensamentos / Intenções de ${question.name2}): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
-      - Posição 5 (Sentimentos / Emoções de ${question.name2}): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
-      - Posição 6 (Atração Sexual / Física de ${question.name2}): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
-
-      --- SÍNTESE ---
-      - Posição 7 (Futuro do Casal / Conselho): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
-
-      **TAREFA FINAL:**
-      Crie uma análise profunda e coesa. Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra, seguindo esta estrutura:
+      A pergunta do consulente é: "${question}"
+      As 3 cartas sorteadas foram:
+      - Carta 1: ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+      - Carta 2: ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Carta 3: ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      TAREFA FINAL: Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
       {
-        "titulo_leitura": "Crie um título poético para esta leitura de relacionamento.",
-        "resumo_geral": "Escreva um parágrafo curto que resuma a dinâmica geral entre ${question.name1} e ${question.name2} revelada pelas cartas.",
+        "contexto_escolhido": {
+          "titulo": "O nome do método que você escolheu (ex: Situação, Obstáculo, Conselho)",
+          "posicoes": ["Nome da Posição 1", "Nome da Posição 2", "Nome da Posição 3"]
+        },
+        "interpretacao": {
+          "titulo_leitura": "Crie um título poético e impactante.",
+          "resumo": "Escreva um parágrafo curto resumindo a mensagem central.",
+          "analise_cartas": [
+            { "posicao": "Nome da Posição 1", "texto": "Analise a primeira carta nesta posição." },
+            { "posicao": "Nome da Posição 2", "texto": "Analise a segunda carta nesta posição." },
+            { "posicao": "Nome da Posição 3", "texto": "Analise a terceira carta nesta posição." }
+          ],
+          "conselho_final": "Conclua com um parágrafo de conselho prático."
+        }
+      }`;
+    } else if (spreadType === 'templeOfAphrodite') {
+      // Este já está atualizado para 'name1' e 'name2'
+      prompt = `
+      Aja como uma taróloga especialista em relacionamentos. A análise é entre "${question.name1}" e "${question.name2}".
+      AS CARTAS SÃO:
+      - Posição 1 (Pensamentos de ${question.name1}): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+      - Posição 2 (Sentimentos de ${question.name1}): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Posição 3 (Atração de ${question.name1}): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      - Posição 4 (Pensamentos de ${question.name2}): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
+      - Posição 5 (Sentimentos de ${question.name2}): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
+      - Posição 6 (Atração de ${question.name2}): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
+      - Posição 7 (Futuro do Casal): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
+      TAREFA FINAL: Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
+      {
+        "titulo_leitura": "Crie um título poético.",
+        "resumo_geral": "Escreva um parágrafo curto resumindo a dinâmica.",
         "analise_pessoa1": {
           "titulo": "Análise de ${question.name1}",
-          "pensamentos": "Analise a carta 1 (Pensamentos de ${question.name1}).",
-          "sentimentos": "Analise a carta 2 (Sentimentos de ${question.name1}).",
-          "atracao": "Analise a carta 3 (Atração de ${question.name1})."
+          "pensamentos": "Analise a carta 1.",
+          "sentimentos": "Analise a carta 2.",
+          "atracao": "Analise a carta 3."
         },
         "analise_pessoa2": {
           "titulo": "Análise de ${question.name2}",
-          "pensamentos": "Analise a carta 4 (Pensamentos de ${question.name2}).",
-          "sentimentos": "Analise a carta 5 (Sentimentos de ${question.name2}).",
-          "atracao": "Analise a carta 6 (Atração de ${question.name2})."
+          "pensamentos": "Analise a carta 4.",
+          "sentimentos": "Analise a carta 5.",
+          "atracao": "Analise a carta 6."
         },
         "futuro_casal": {
           "titulo": "O Futuro do Casal",
-          "texto": "Analise a carta 7 como a síntese, o futuro provável ou o conselho final para a relação."
+          "texto": "Analise a carta 7 como a síntese."
         }
-      }
-      `;
+      }`;
     } else if (spreadType === 'pathChoice') {
       prompt = `
-      Aja como uma conselheira sábia e taróloga, guiando uma pessoa em um momento de decisão.
-      O consulente está em dúvida entre dois caminhos:
-      - Caminho 1: "${question.path1}"
-      - Caminho 2: "${question.path2}"
-
-      Foram sorteadas 8 cartas.
-      **CARTAS PARA O CAMINHO 1 ("${question.path1}"):**
-      - Posição 1 (O que favorece): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
-      - Posição 2 (O que precisa ser trabalhado): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
-      - Posição 3 (A perspectiva): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
-      - Posição 4 (O conselho): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
-
-      **CARTAS PARA O CAMINHO 2 ("${question.path2}"):**
-      - Posição 1 (O que favorece): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
-      - Posição 2 (O que precisa ser trabalhado): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
-      - Posição 3 (A perspectiva): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
-      - Posição 4 (O conselho): ${cards[7].nome} ${cards[7].invertida ? '(Invertida)' : ''}
-
-      **TAREFA FINAL:**
-      Crie uma análise comparativa. Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
+      Aja como uma conselheira sábia. A dúvida é: Caminho 1: "${question.path1}" vs Caminho 2: "${question.path2}".
+      CARTAS CAMINHO 1:
+      - Posição 1 (Favorece): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
+      - Posição 2 (Trabalhar): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Posição 3 (Perspectiva): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      - Posição 4 (Conselho): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
+      CARTAS CAMINHO 2:
+      - Posição 1 (Favorece): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
+      - Posição 2 (Trabalhar): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
+      - Posição 3 (Perspectiva): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
+      - Posição 4 (Conselho): ${cards[7].nome} ${cards[7].invertida ? '(Invertida)' : ''}
+      TAREFA FINAL: Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
       {
-        "titulo_leitura": "Crie um título poético para esta escolha.",
+        "titulo_leitura": "Crie um título poético.",
         "caminho1": {
           "titulo": "${question.path1}",
           "analises": [
@@ -178,20 +142,18 @@ app.post('/api/tarot', async (req, res) => {
             { "posicao": "Conselho", "texto": "Analise a carta 8." }
           ]
         },
-        "comparativo_final": "Escreva um parágrafo de conclusão que compare as energias dos dois caminhos e ofereça uma síntese ou conselho final."
-      }
-      `;
+        "comparativo_final": "Escreva um parágrafo de conclusão comparando os caminhos."
+      }`;
+    
+    // <<< ESTE É O NOVO PROMPT "BONITO" PARA A CRUZ CELTA >>>
     } else if (spreadType === 'celticCross') {
       prompt = `
-      Aja como uma taróloga experiente com uma profunda abordagem psicológica e terapêutica.
-      A pergunta do consulente é: "${question}".
-      A tiragem da Cruz Celta revelou as seguintes 10 cartas:
-
-      **AS CARTAS SORTEADAS SÃO:**
+      Aja como uma taróloga experiente. A pergunta é: "${question}".
+      AS CARTAS SÃO:
       - Posição 1 (O Coração da Matéria): ${cards[0].nome} ${cards[0].invertida ? '(Invertida)' : ''}
-      - Posição 2 (O Desafio Imediato): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
-      - Posição 3 (A Base da Questão): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
-      - Posição 4 (O Passado Distante): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
+      - Posição 2 (O Desafio): ${cards[1].nome} ${cards[1].invertida ? '(Invertida)' : ''}
+      - Posição 3 (A Base): ${cards[2].nome} ${cards[2].invertida ? '(Invertida)' : ''}
+      - Posição 4 (O Passado): ${cards[3].nome} ${cards[3].invertida ? '(Invertida)' : ''}
       - Posição 5 (O Objetivo): ${cards[4].nome} ${cards[4].invertida ? '(Invertida)' : ''}
       - Posição 6 (O Caminho): ${cards[5].nome} ${cards[5].invertida ? '(Invertida)' : ''}
       - Posição 7 (O Consulente): ${cards[6].nome} ${cards[6].invertida ? '(Invertida)' : ''}
@@ -199,29 +161,27 @@ app.post('/api/tarot', async (req, res) => {
       - Posição 9 (Esperanças e Medos): ${cards[8].nome} ${cards[8].invertida ? '(Invertida)' : ''}
       - Posição 10 (O Resultado Final): ${cards[9].nome} ${cards[9].invertida ? '(Invertida)' : ''}
 
-      **TAREFA FINAL:**
-      Crie uma análise profunda e coesa, conectando as cartas às suas posições e à pergunta. Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto ou formatação extra, seguindo esta estrutura:
+      TAREFA FINAL: Retorne sua resposta EXCLUSIVAMENTE em formato JSON, sem nenhum texto extra, seguindo esta estrutura:
       {
-        "titulo_leitura": "Crie um título poético e impactante para esta leitura.",
-        "resumo_geral": "Escreva um parágrafo curto que resuma a mensagem central da jornada de 10 cartas.",
+        "titulo_leitura": "Crie um título poético para esta leitura.",
+        "resumo_geral": "Escreva um parágrafo curto que resuma a mensagem central da jornada.",
         "analise_cartas": [
           { "posicao": "Posição 1: O Coração da Matéria", "texto": "Analise a carta 1 (${cards[0].nome}) neste contexto." },
-          { "posicao": "Posição 2: O Desafio Imediato", "texto": "Analise a carta 2 (${cards[1].nome}) neste contexto." },
-          { "posicao": "Posição 3: A Base da Questão", "texto": "Analise a carta 3 (${cards[2].nome}) neste contexto." },
-          { "posicao": "Posição 4: O Passado Distante", "texto": "Analise a carta 4 (${cards[3].nome}) neste contexto." },
+          { "posicao": "Posição 2: O Desafio", "texto": "Analise a carta 2 (${cards[1].nome}) neste contexto." },
+          { "posicao": "Posição 3: A Base", "texto": "Analise a carta 3 (${cards[2].nome}) neste contexto." },
+          { "posicao": "Posição 4: O Passado", "texto": "Analise a carta 4 (${cards[3].nome}) neste contexto." },
           { "posicao": "Posição 5: O Objetivo", "texto": "Analise a carta 5 (${cards[4].nome}) neste contexto." },
           { "posicao": "Posição 6: O Caminho", "texto": "Analise a carta 6 (${cards[5].nome}) neste contexto." },
           { "posicao": "Posição 7: O Consulente", "texto": "Analise a carta 7 (${cards[6].nome}) neste contexto." },
           { "posicao": "Posição 8: O Ambiente", "texto": "Analise a carta 8 (${cards[7].nome}) neste contexto." },
           { "posicao": "Posição 9: Esperanças e Medos", "texto": "Analise a carta 9 (${cards[8].nome}) neste contexto." }
         ],
-        "conselho_final": "Analise a carta 10 (${cards[9].nome}) como a síntese e o conselho final para o consulente."
-      }
-      `;
+        "conselho_final": "Analise a carta 10 (${cards[9].nome}) como a síntese e o conselho final."
+      }`;
     } else { 
       console.error(`[Oraculo Backend] ERRO: spreadType '${spreadType}' não é reconhecido.`);
       return res.status(400).json({ error: `O tipo de tiragem '${spreadType}' não é reconhecido pelo servidor.` });
-    }
+  }
 
     // --- GERAÇÃO E PROCESSAMENTO DA RESPOSTA ---
 
@@ -229,6 +189,7 @@ app.post('/api/tarot', async (req, res) => {
     const result = await model.generateContent(prompt);
     const rawText = result.response.text();
     
+    // <<< ESTE 'IF' AGORA PROCESSA TODAS AS TIRAGENS COMO JSON >>>
     if (spreadType === 'threeCards' || spreadType === 'templeOfAphrodite' || spreadType === 'pathChoice' || spreadType === 'celticCross') {
       try {
         const startIndex = rawText.indexOf('{');
@@ -241,10 +202,12 @@ app.post('/api/tarot', async (req, res) => {
         const jsonString = rawText.substring(startIndex, endIndex + 1);
         const jsonData = JSON.parse(jsonString);
         
+        // Envia o JSON estruturado padronizado
         return res.status(200).json({ interpretationType: 'structured', data: jsonData });
 
       } catch (e) {
         console.error("LOG: Falha ao extrair ou fazer parse do JSON.", { error: e.message, rawText });
+        // Fallback de erro: retorna o texto bruto como 'simple' para depuração
         return res.status(200).json({ 
             interpretationType: 'simple', 
             data: { 
@@ -254,6 +217,7 @@ app.post('/api/tarot', async (req, res) => {
         });
       }
     } else {
+      // Este 'else' não deve ser atingido se todos os spreadTypes estiverem no 'if' acima
       console.warn(`[Oraculo Backend] WARN: A resposta para '${spreadType}' não foi processada como JSON.`);
       return res.status(200).json({ 
         interpretationType: 'simple', 
@@ -309,12 +273,11 @@ app.post('/api/tarot/card-meaning', async (req, res) => {
     }
 
     const prompt = `
-      Aja como um professor de Tarot. Explique de forma didática o que a carta "${cardName}" (${cardOrientation}) significa arquetipicamente na posição "${positionName}" de uma Cruz Celta.
+      Você é uma cartomante experiente. Explique de forma didática o que a carta "${cardName}" (${cardOrientation}) significa arquetipicamente na posição "${positionName}" de uma Cruz Celta.
       A resposta deve ser curta e geral (2-3 frases), sem mencionar uma pergunta específica do consulente.
     `;
 
     const model = genAI.getGenerativeModel({ model: geminiModel });
-  mudei o nome do modelo para gemini-1.5-flash
     const result = await model.generateContent(prompt);
     const didacticText = result.response.text();
 
