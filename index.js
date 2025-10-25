@@ -1,3 +1,42 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Configuração inicial
+dotenv.config();
+const app = express();
+const PORT = process.env.PORT || 3001;
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://oraculo-front-2-0.vercel.app'
+];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Acesso negado pela política de CORS'));
+    }
+  },
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(express.json());
+
+// Configuração do Cliente Gemini
+const API_KEY = process.env.GOOGLE_API_KEY;
+if (!API_KEY) {
+  console.error("ERRO: A variável GOOGLE_API_KEY não foi encontrada no arquivo .env");
+  process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(API_KEY);
+const geminiModel = "gemini-2.5-flash";
+
+
 // ===================================================================
 // ----------------- ROTA PRINCIPAL DO TAROT (CORRIGIDA) -----------------
 // ===================================================================
@@ -183,7 +222,6 @@ app.post('/api/tarot', async (req, res) => {
       }
       `;
     } else { 
-        // Antigo prompt da Cruz Celta foi removido daqui.
         // Este 'else' agora é um fallback para tiragens não reconhecidas.
       console.error(`[Oraculo Backend] ERRO: spreadType '${spreadType}' não é reconhecido.`);
       return res.status(400).json({ error: `O tipo de tiragem '${spreadType}' não é reconhecido pelo servidor.` });
@@ -196,6 +234,7 @@ app.post('/api/tarot', async (req, res) => {
     const rawText = result.response.text();
     
     // <<< MUDANÇA 2: ADICIONAR 'celticCross' À LÓGICA DE PROCESSAMENTO DE JSON >>>
+section: 'section',
     if (spreadType === 'threeCards' || spreadType === 'templeOfAphrodite' || spreadType === 'pathChoice' || spreadType === 'celticCross') {
       try {
         // Limpa a resposta da IA para garantir que é um JSON válido
@@ -225,7 +264,7 @@ app.post('/api/tarot', async (req, res) => {
       }
     } else {
       // Este bloco 'else' agora está obsoleto, pois todas as tiragens devem ser 'structured'.
-      // Mantemos como um fallback de segurança.
+      // Mantemos como um fallback de segurança caso algo falhe.
       console.warn(`[Oraculo Backend] WARN: A resposta para '${spreadType}' não foi processada como JSON.`);
       return res.status(200).json({ 
         interpretationType: 'simple', 
@@ -240,4 +279,64 @@ app.post('/api/tarot', async (req, res) => {
     console.error("LOG: Erro no endpoint /api/tarot:", error);
     return res.status(500).json({ error: 'Falha ao processar a leitura do Tarot.' });
   }
+});
+
+// ===================================================================
+// ------------------------- OUTRAS ROTAS (INTACTAS) -----------------
+// ===================================================================
+
+// ROTA 2: Para o chat de diálogo sobre uma leitura
+app.post('/api/tarot/chat', async (req, res) => {
+  try {
+    const { userMessage, chatContext } = req.body;
+    if (!userMessage || !chatContext) {
+      return res.status(400).json({ error: 'Mensagem e contexto do chat são necessários.' });
+    }
+
+    const prompt = `
+      Você é uma cartomante sábia. O CONTEXTO DA LEITURA É: "${chatContext}".
+      O consulente tem uma dúvida sobre a leitura. A pergunta dele é: "${userMessage}".
+      Responda à pergunta de forma clara, curta, objetiva e empática, se baseando no contexto.
+    `;
+
+    const model = genAI.getGenerativeModel({ model: geminiModel });
+    const result = await model.generateContent(prompt);
+    const aiResponse = result.response.text();
+
+    res.status(200).json({ aiResponse });
+
+  } catch (error) {
+    console.error("LOG: Erro no endpoint /api/tarot/chat:", error);
+    res.status(500).json({ error: 'Falha ao processar a mensagem do chat.' });
+  }
+});
+
+// ROTA 3: Para o significado didático de uma carta/posição
+app.post('/api/tarot/card-meaning', async (req, res) => {
+  try {
+    const { cardName, cardOrientation, positionName } = req.body;
+    if (!cardName || !cardOrientation || !positionName) {
+      return res.status(400).json({ error: 'Dados da carta, orientação e posição são necessários.' });
+    }
+
+    const prompt = `
+      Aja como um professor de Tarot. Explique de forma didática o que a carta "${cardName}" (${cardOrientation}) significa arquetipicamente na posição "${positionName}" de uma Cruz Celta.
+      A resposta deve ser curta e geral (2-3 frases), sem mencionar uma pergunta específica do consulente.
+    `;
+
+    const model = genAI.getGenerativeModel({ model: geminiModel });
+    const result = await model.generateContent(prompt);
+    const didacticText = result.response.text();
+
+    res.status(200).json({ didacticText });
+
+  } catch (error) {
+    console.error("LOG: Erro no endpoint /api/tarot/card-meaning:", error);
+    res.status(500).json({ error: 'Falha ao obter significado da carta.' });
+  }
+});
+
+// 6. "Ligando" o servidor
+app.listen(PORT, () => {
+  console.log(`✨ Servidor do Oráculo de Tarot rodando em http://localhost:${PORT}`);
 });
