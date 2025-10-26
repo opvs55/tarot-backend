@@ -1,33 +1,56 @@
-// index.js (ou server.js) - Novo Ponto de Entrada
+// index.js (ou server.js) - Ponto de Entrada Refatorado
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-// Importar configurações e rotas
-import { corsOptions } from './config/cors.js';
-import tarotRoutes from './routes/tarotRoutes.js';
-import numerologyRoutes from './routes/numerologyRoutes.js';
+// Importar configurações e rotas dos módulos
+import { corsOptions } from './config/cors.js'; // Importa a configuração do CORS
+import tarotRoutes from './routes/tarotRoutes.js'; // Importa o router do Tarot
+import numerologyRoutes from './routes/numerologyRoutes.js'; // Importa o router da Numerologia
+// Nota: A configuração do Gemini (`config/gemini.js`) é usada dentro dos controllers, não diretamente aqui.
+// Nota: O cliente Supabase (`config/supabaseClient.js`) é usado dentro dos controllers, não diretamente aqui.
 
-// Configuração inicial
+// Carrega variáveis de ambiente do ficheiro .env
 dotenv.config();
+
+// Cria a aplicação Express
 const app = express();
+// Define a porta, usando a variável de ambiente ou 3001 como padrão
 const PORT = process.env.PORT || 3001;
 
-// Middlewares essenciais
+// === Middlewares Essenciais ===
+
+// Habilita o CORS com as opções configuradas
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Pré-verificação CORS
-app.use(express.json()); // Para parsear JSON no corpo das requisições
+// Habilita o pré-processamento de requisições OPTIONS pelo CORS (necessário para alguns browsers/métodos)
+app.options('*', cors(corsOptions)); 
+// Habilita o parseamento de corpos de requisição JSON
+app.use(express.json()); 
 
-// Montar as rotas
-app.use('/api/tarot', tarotRoutes);           // Todas as rotas de tarot começarão com /api/tarot
-app.use('/api/numerology', numerologyRoutes); // Todas as rotas de numerologia começarão com /api/numerology
+// === Montagem das Rotas ===
 
-// Rota "raiz" opcional para verificar se o servidor está online
+// Monta o router de Tarot no caminho base /api/tarot
+// Todas as rotas definidas em tarotRoutes.js (/, /chat, /card-meaning)
+// serão acessíveis a partir de /api/tarot/...
+app.use('/api/tarot', tarotRoutes);           
+
+// Monta o router de Numerologia no caminho base /api/numerology
+// Todas as rotas definidas em numerologyRoutes.js (/ e /reset)
+// serão acessíveis a partir de /api/numerology/...
+app.use('/api/numerology', numerologyRoutes); 
+
+// === Rota Raiz (Opcional) ===
+
+// Uma rota simples para verificar se o servidor está no ar
 app.get('/', (req, res) => {
-  res.send('Servidor Oráculo IA está online!');
+  // Envia uma resposta simples para requisições GET na raiz
+  res.send('Servidor Oráculo IA (Refatorado) está online!'); 
 });
 
-// Iniciar o servidor
+// === Iniciar o Servidor ===
+
+// Faz a aplicação Express "ouvir" na porta definida
 app.listen(PORT, () => {
-  console.log(`✨ Servidor Oráculo IA rodando em http://localhost:${PORT}`);
+  // Exibe uma mensagem no console quando o servidor inicia com sucesso
+  console.log(`✨ Servidor Oráculo IA (Refatorado) rodando em http://localhost:${PORT}`); 
 });
