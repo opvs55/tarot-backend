@@ -1,4 +1,4 @@
-// config/cors.js
+// config/cors.js (CORRIGIDO)
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -13,6 +13,8 @@ export const corsOptions = {
       callback(new Error('Acesso negado pela política de CORS'));
     }
   },
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
+  // Adicione 'DELETE' à lista de métodos permitidos
+  methods: ['GET', 'POST', 'DELETE'], // <<< CORREÇÃO AQUI
+  // Adicione 'Authorization' se usar tokens (recomendado para DELETE)
+  allowedHeaders: ['Content-Type', 'Authorization'], // <<< ADICIONE 'Authorization' SE NECESSÁRIO
 };
