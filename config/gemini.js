@@ -11,5 +11,5 @@ if (!GOOGLE_API_KEY) {
   process.exit(1); // Interrompe a execução se a chave não estiver definida
 }
 
-export const genAI = new GoogleGenerativeAI(API_KEY);
+export const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
 export const geminiModelName = "gemini-2.5-flash"; // Nome do modelo centralizado aqui
