@@ -107,14 +107,14 @@ export const getOrCalculateNumerology = async (req, res) => {
           O JSON deve ter EXATAMENTE a seguinte estrutura:
           {
             "archetype_title": "O Título do Arquétipo do Dia (ex: O Dia da Aparente Simplicidade)",
-            "archetype_description": "Um parágrafo de 2-4 frases descrevendo a essência das pessoas nascidas neste dia. Pode usar **negrito** para ênfase.",
-            "numerology_details": "Um parágrafo curto sobre a numerologia e planetas associados ao dia (ex: 'Regido pelo número 6 (2+4=6) e Vênus...')",
-            "tarot_card": "Um parágrafo curto sobre a carta de Tarot associada e seu significado (ex: 'A sexta carta dos Arcanos Maiores é Os Enamorados...')",
-            "advice": "Um parágrafo curto de conselho prático (ex: 'Mantenha uma vida equilibrada e tome cuidado...')",
+            "archetype_description": "Um parágrafo de 3-5 frases descrevendo a essência das pessoas nascidas neste dia. Pode usar **negrito** para ênfase.",
+            "numerology_details": "Uma análise numerologica e planetas associados ao dia (ex: 'Regido pelo número 6 (2+4=6) e Vênus...')",
+            "tarot_card": "Uma análise sobre a carta de Tarot associada e seu significado (ex: 'A sexta carta dos Arcanos Maiores é Os Enamorados...')",
+            "advice": "Um conselho prático (ex: 'Mantenha uma vida equilibrada e tome cuidado...')",
             "strengths": ["Um Ponto Forte", "Outro Ponto Forte", "Terceiro Ponto Forte"],
             "weaknesses": ["Um Ponto Fraco", "Outro Ponto Fraco", "Terceiro Ponto Fraco"]
           }
-          Use o PDF como inspiração para o tom e conteúdo. Seja conciso.
+          Use a obra de Gary Goldschneider e Joost Elffers como referência.
         `;
 
         const model = genAI.getGenerativeModel({ model: geminiModelName });
