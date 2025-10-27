@@ -6,7 +6,7 @@ dotenv.config(); // Garante que as variáveis de ambiente sejam carregadas
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-if (!API_KEY) {
+if (!GOOGLE_API_KEY) {
   console.error("ERRO: A variável GOOGLE_API_KEY não foi encontrada.");
   process.exit(1); // Interrompe a execução se a chave não estiver definida
 }
