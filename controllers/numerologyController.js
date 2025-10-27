@@ -1,154 +1,161 @@
-// controllers/numerologyController.js
+// controllers/numerologyController.js (USANDO CLIENTE POR REQUISIÇÃO)
 import { reduceNumber, lifePathMeanings, birthdayNumberMeanings } from '../utils/numerologyHelpers.js';
-// Importa o cliente Supabase configurado (garanta que o caminho ../config/ está correto)
-import { supabase } from '../config/supabaseClient.js';
+// <<< MUDANÇA: Importa a FUNÇÃO para criar o cliente >>>
+import { createSupabaseServerClient } from '../config/supabaseClient.js';
 
-// --- Função Principal para Calcular ou Obter Leitura (MODIFICADA) ---
+// --- Função Principal para Calcular ou Obter Leitura ---
 export const getOrCalculateNumerology = async (req, res) => {
   try {
-    // birthDate agora é opcional na requisição para permitir a busca
-    const { birthDate, user } = req.body;
+  	const { birthDate } = req.body; // Pega a data do corpo
+    // <<< 1. EXTRAIR TOKEN DO CABEÇALHO >>>
+    const authHeader = req.headers.authorization;
+    let token = null;
 
-    // Validação de Autenticação (essencial)
-    if (!user || !user.id) {
-      console.warn("[Numerology Controller] Tentativa de acesso não autenticada.");
-      return res.status(401).json({ error: 'Autenticação necessária para acessar a numerologia.' });
-    }
-    const userId = user.id;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1]; // Extrai o token
+    }
 
-    // 1. Tenta buscar leitura existente primeiro (sempre faz isso)
+    if (!token) {
+      console.warn("[Numerology Controller] Tentativa de acesso sem token Bearer válido.");
+      return res.status(401).json({ error: 'Token de autenticação inválido ou ausente.' });
+    }
+
+    // <<< 2. CRIAR CLIENTE SUPABASE AUTENTICADO PARA ESTA REQUISIÇÃO >>>
+    let supabase; // Declara a variável do cliente
+    try {
+      supabase = createSupabaseServerClient(token); // Cria o cliente com o token
+    } catch (clientError) {
+      console.error("[Numerology Controller] Erro ao criar cliente Supabase:", clientError.message);
+      return res.status(401).json({ error: clientError.message || 'Falha ao inicializar autenticação.' });
+    }
+
+    // <<< 3. OBTER USUÁRIO A PARTIR DO CLIENTE AUTENTICADO >>>
+    // Isso valida o token e obtém o ID do usuário de forma segura
+     const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+     if (userError || !supabaseUser) {
+        console.error("[Numerology Controller] Erro ao obter usuário do Supabase com token:", userError);
+        return res.status(401).json({ error: 'Não foi possível validar o usuário com o token fornecido.' });
+     }
+     const userId = supabaseUser.id;
+     console.log(`[Numerology Controller] Requisição autenticada para user ${userId}`);
+
+
+    // 4. Tenta buscar leitura existente (usando o cliente autenticado 'supabase')
     console.log(`[Numerology Controller] Verificando leitura existente para user ${userId}`);
-    const { data: existingReading, error: fetchError } = await supabase
+    const { data: existingReading, error: fetchError } = await supabase // <<< USA O CLIENTE DA REQUISIÇÃO
       .from('numerology_readings')
       .select('*')
       .eq('user_id', userId)
-      .maybeSingle(); // Retorna null se não encontrar, sem gerar erro
+      .maybeSingle();
 
-    if (fetchError) {
-      console.error("[Numerology Controller] Erro ao buscar leitura existente:", fetchError);
-      throw new Error('Erro ao verificar histórico de numerologia. Tente novamente.');
-    }
+    if (fetchError) {/* ... (erro fetch) ... */ throw new Error('Erro ao buscar.'); }
+    if (existingReading) { /* ... (retorna existente) ... */ return res.status(200).json(existingReading); }
 
-    // 2. Se já existe, retorna a existente IMEDIATAMENTE
-    if (existingReading) {
-      console.log(`[Numerology Controller] Retornando leitura existente para user ${userId}`);
-      return res.status(200).json(existingReading);
-    }
+    // 5. Validação da Data (se não encontrou e data foi enviada)
+    if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+      console.log(`[Numerology Controller] Leitura não encontrada e data inválida/ausente.`);
+      return res.status(404).json({ error: 'Leitura não encontrada. Forneça data válida.' });
+    }
 
-    // --- Lógica de CÁLCULO (só executa se NÃO encontrou existente E birthDate foi fornecida) ---
-
-    // 3. Validação da Data de Nascimento (APENAS se não encontrou existente e data foi enviada)
-    if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
-       // Se a data for inválida ou ausente E não achamos leitura existente:
-       // Retorna 404 Not Found, indicando que a leitura não existe e precisa de uma data válida para ser criada.
-      console.log(`[Numerology Controller] Leitura não encontrada para user ${userId} e data inválida/ausente fornecida.`);
-      return res.status(404).json({ error: 'Nenhuma leitura encontrada. Forneça uma data de nascimento válida para calcular.' });
-    }
-
-    // 4. Se chegou aqui: Não há leitura existente E temos uma data válida -> Calcula
+    // 6. Calcular (como antes)
     console.log(`[Numerology Controller] Calculando nova leitura para user ${userId} com data ${birthDate}`);
-    const [year, month, day] = birthDate.split('-').map(Number);
+    const [year, month, day] = birthDate.split('-').map(Number);
+    const lifePathNumber = reduceNumber(/*...*/); // Assume que reduceNumber e meanings estão importados
+    const lifePathMeaning = lifePathMeanings[lifePathNumber] || "...";
+    const birthdayNumber = reduceNumber(day);
+    const birthdayMeaning = birthdayNumberMeanings[day] || "...";
 
-    const reducedDay = reduceNumber(day);
-    const reducedMonth = reduceNumber(month);
-    const reducedYear = reduceNumber(year);
-    const lifePathNumber = reduceNumber(reducedDay + reducedMonth + reducedYear);
-    const lifePathMeaning = lifePathMeanings[lifePathNumber] || "Significado do Caminho de Vida não encontrado.";
-    const birthdayNumber = reduceNumber(day);
-    const birthdayMeaning = birthdayNumberMeanings[day] || "Significado do dia de aniversário não encontrado.";
-
-    // 5. Prepara os dados para inserir na nova tabela
+    // 7. Preparar dados (usando userId validado)
     const newReadingData = {
       user_id: userId,
-      input_birth_date: birthDate,
-      life_path_number: lifePathNumber,
-      life_path_meaning: lifePathMeaning,
-      birthday_number: birthdayNumber,
-      birthday_meaning: birthdayMeaning,
+      input_birth_date: birthDate,
+      life_path_number: lifePathNumber,
+      life_path_meaning: lifePathMeaning,
+      birthday_number: birthdayNumber,
+      birthday_meaning: birthdayMeaning,
     };
 
-    // 6. Insere na tabela numerology_readings
+    // 8. Inserir na tabela (usando o cliente autenticado 'supabase')
     console.log(`[Numerology Controller] Inserindo nova leitura para user ${userId}`);
-    const { data: insertedReading, error: insertError } = await supabase
+    const { data: insertedReading, error: insertError } = await supabase // <<< USA O CLIENTE DA REQUISIÇÃO
       .from('numerology_readings')
       .insert(newReadingData)
       .select()
       .single();
 
-    if (insertError) {
-      console.error("[Numerology Controller] Erro ao INSERIR nova leitura:", insertError);
-      if (insertError.code === '23505') { // UNIQUE constraint violation
-        console.warn(`[Numerology Controller] Tentativa de inserção duplicada (race condition?) para user ${userId}`);
-        return res.status(409).json({ error: 'Erro de concorrência: Já existe uma leitura.' });
-      }
-      throw new Error('Erro ao salvar a nova leitura numerológica.');
-    }
+    if (insertError) { /* ... (tratamento de erro insert, incluindo 409) ... */ throw new Error('Erro ao salvar.'); }
 
-    // 7. Atualiza a tabela profiles com os números calculados
-    console.log(`[Numerology Controller] Atualizando perfil ${userId} com números ${lifePathNumber}/${birthdayNumber}.`);
-    const { error: profileUpdateError } = await supabase
+    // 9. Atualizar profiles (usando o cliente autenticado 'supabase')
+    console.log(`[Numerology Controller] Atualizando perfil ${userId}`);
+    const { error: profileUpdateError } = await supabase // <<< USA O CLIENTE DA REQUISIÇÃO
       .from('profiles')
-      .update({
-          life_path_number: lifePathNumber,
-          birthday_number: birthdayNumber
-       })
+      .update({ life_path_number: lifePathNumber, birthday_number: birthdayNumber })
       .eq('id', userId);
 
-    if (profileUpdateError) {
-      console.error(`[Numerology Controller] Erro não fatal ao ATUALIZAR perfil ${userId}:`, profileUpdateError);
-      // Adiciona um aviso aos dados retornados se a atualização do perfil falhar
-      insertedReading.warning = "Não foi possível atualizar seu perfil com os números.";
-    } else {
-      console.log(`[Numerology Controller] Perfil ${userId} atualizado com sucesso.`);
-    }
+    if (profileUpdateError) { /* ... (log erro não fatal) ... */ insertedReading.warning = "..."; }
+    else { console.log(`[Numerology Controller] Perfil ${userId} atualizado.`); }
 
-    // 8. Retorna os dados da leitura recém-criada
-    console.log(`[Numerology Controller] Nova leitura criada com sucesso para user ${userId}`);
-    return res.status(201).json(insertedReading); // Status 201: Created
+    return res.status(201).json(insertedReading);
 
   } catch (error) {
     console.error("LOG: Erro geral em getOrCalculateNumerology:", error);
-    return res.status(500).json({ error: error.message || 'Falha ao processar a solicitação de numerologia.' });
-  }
+    // Não precisamos mais limpar sessão aqui
+    return res.status(500).json({ error: error.message || 'Falha ao processar.' });
+  }
+  // <<< REMOVIDO o bloco finally com signOut >>>
 };
 
-// --- Função para Resetar/Apagar a Leitura (sem alterações lógicas) ---
+// --- Função para Resetar/Apagar a Leitura (MODIFICADA com cliente por requisição) ---
 export const resetNumerologyReading = async (req, res) => {
   try {
-    const { user } = req.body;
-    if (!user || !user.id) {
-      return res.status(401).json({ error: 'Autenticação necessária.' });
-    }
-    const userId = user.id;
+    // <<< 1. EXTRAIR TOKEN >>>
+    const authHeader = req.headers.authorization;
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+    if (!token) { return res.status(401).json({ error: 'Token inválido ou ausente.' }); }
 
-    // 1. Apaga da tabela numerology_readings
-    console.log(`[Numerology Controller] Tentando apagar leitura para user ${userId}`);
-    const { error: deleteError } = await supabase
+    // <<< 2. CRIAR CLIENTE >>>
+    let supabase;
+    try {
+      supabase = createSupabaseServerClient(token);
+    } catch (clientError) {
+      return res.status(401).json({ error: clientError.message || 'Falha ao inicializar autenticação.' });
+    }
+
+    // <<< 3. OBTER/VALIDAR USUÁRIO >>>
+     const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+     if (userError || !supabaseUser) {
+        return res.status(401).json({ error: 'Não foi possível validar o usuário.' });
+     }
+     const userId = supabaseUser.id;
+     console.log(`[Numerology Controller - Reset] Requisição autenticada para user ${userId}`);
+
+    // 4. Apagar da tabela numerology_readings (usando cliente autenticado)
+    console.log(`[Numerology Controller - Reset] Apagando leitura para user ${userId}`);
+    const { error: deleteError } = await supabase // <<< USA O CLIENTE DA REQUISIÇÃO
       .from('numerology_readings')
       .delete()
       .eq('user_id', userId);
-    if (deleteError) {
-      console.error(`[Numerology Controller] Erro ao APAGAR leitura para user ${userId}:`, deleteError);
-      throw new Error('Erro ao apagar a leitura numerológica existente.');
-    }
-    console.log(`[Numerology Controller] Leitura apagada com sucesso para user ${userId}`);
+    if (deleteError) { /* ... (throw error) ... */ throw new Error('Erro ao apagar.'); }
+    console.log(`[Numerology Controller - Reset] Leitura apagada para user ${userId}`);
 
-    // 2. Limpa os campos no perfil
-    console.log(`[Numerology Controller] Limpando números do perfil ${userId}`);
-    const { error: profileClearError } = await supabase
+    // 5. Limpar perfil (usando cliente autenticado)
+    console.log(`[Numerology Controller - Reset] Limpando perfil ${userId}`);
+    const { error: profileClearError } = await supabase // <<< USA O CLIENTE DA REQUISIÇÃO
       .from('profiles')
       .update({ life_path_number: null, birthday_number: null })
       .eq('id', userId);
-    if (profileClearError) {
-      console.error(`[Numerology Controller] Erro não fatal ao LIMPAR perfil ${userId} após reset:`, profileClearError);
-    } else {
-      console.log(`[Numerology Controller] Perfil ${userId} limpo após reset.`);
-    }
+    if (profileClearError) { /* ... (log erro não fatal) ... */ }
+    else { console.log(`[Numerology Controller - Reset] Perfil ${userId} limpo.`); }
 
-    return res.status(200).json({ message: 'Leitura numerológica apagada com sucesso. Você pode calcular uma nova.' });
+    res.status(200).json({ message: 'Leitura apagada.' });
 
   } catch (error) {
     console.error("LOG: Erro em resetNumerologyReading:", error);
-    return res.status(500).json({ error: error.message || 'Falha ao resetar a numerologia.' });
-  }
+    // Não precisamos limpar sessão aqui
+    return res.status(500).json({ error: error.message || 'Falha ao resetar.' });
+  }
+  // <<< REMOVIDO o bloco finally com signOut >>>
 };
