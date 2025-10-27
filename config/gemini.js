@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Garante que as variáveis de ambiente sejam carregadas
 
-const API_KEY = process.env.GOOGLE_API_KEY;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 if (!API_KEY) {
   console.error("ERRO: A variável GOOGLE_API_KEY não foi encontrada.");
