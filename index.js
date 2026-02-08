@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { corsOptions } from './config/cors.js'; // Importa a configuração do CORS
 import tarotRoutes from './routes/tarotRoutes.js'; // Importa o router do Tarot
 import numerologyRoutes from './routes/numerologyRoutes.js'; // Importa o router da Numerologia
+import oraclesRoutes from './routes/oraclesRoutes.js'; // Importa o router do Oráculos
 // Nota: A configuração do Gemini (`config/gemini.js`) é usada dentro dos controllers, não diretamente aqui.
 // Nota: O cliente Supabase (`config/supabaseClient.js`) é usado dentro dos controllers, não diretamente aqui.
 
@@ -38,6 +39,11 @@ app.use('/api/tarot', tarotRoutes);
 // Todas as rotas definidas em numerologyRoutes.js (/ e /reset)
 // serão acessíveis a partir de /api/numerology/...
 app.use('/api/numerology', numerologyRoutes); 
+
+// Monta o router de Oráculos no caminho base /api/oracles
+// Todas as rotas definidas em oraclesRoutes.js (/weekly)
+// serão acessíveis a partir de /api/oracles/...
+app.use('/api/oracles', oraclesRoutes);
 
 // === Rota Raiz (Opcional) ===
 
