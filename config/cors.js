@@ -3,7 +3,6 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://oraculo-front-2-0.vercel.app',
-  'https://oraculo-front-2-0-git-codex-add-birth-c-2a1b14-opvs55s-projects.vercel.app'
 ];
 
 export const corsOptions = {
