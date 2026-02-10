@@ -5,202 +5,273 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const PRIMARY_PROVIDER = (process.env.LLM_PROVIDER || 'developer').toLowerCase();
-const FALLBACK_PROVIDER = (process.env.LLM_PROVIDER_FALLBACK || '').toLowerCase();
+/**
+ * =========================================================
+ * Helpers
+ * =========================================================
+ */
+class AppError extends Error {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', details = undefined) {
+    super(message);
+    this.name = 'AppError';
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+}
 
-const PRIMARY_MODEL = process.env.GEMINI_MODEL_PRIMARY || 'gemini-3-flash-preview';
+function withTimeout(promise, ms, timeoutCode = 'LLM_TIMEOUT') {
+  if (!ms || Number.isNaN(ms) || ms <= 0) return promise;
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new AppError('Timeout na chamada ao provedor LLM.', 503, timeoutCode));
+    }, ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+}
+
+function normalizeProvider(raw) {
+  const value = (raw || '').toLowerCase().trim();
+
+  // aliases para AI Studio / API Key
+  if (['google_ai_studio', 'ai_studio', 'google', 'gemini', 'developer'].includes(value)) {
+    return 'developer';
+  }
+
+  // vertex
+  if (['vertex', 'vertex_ai', 'google_vertex'].includes(value)) {
+    return 'vertex';
+  }
+
+  // fallback padrão
+  if (!value) return 'developer';
+
+  return value;
+}
+
+function isLocationUnsupportedError(error) {
+  const text = String(error?.message || '').toLowerCase();
+  return (
+    text.includes('user location is not supported') ||
+    text.includes('location is not supported') ||
+    text.includes('unsupported location')
+  );
+}
+
+function isRetryableProviderError(error) {
+  const text = String(error?.message || '').toLowerCase();
+  return (
+    text.includes('timeout') ||
+    text.includes('429') ||
+    text.includes('rate limit') ||
+    text.includes('temporarily unavailable') ||
+    text.includes('service unavailable') ||
+    text.includes('503')
+  );
+}
+
+/**
+ * =========================================================
+ * Env + Config
+ * =========================================================
+ */
+const PRIMARY_PROVIDER = normalizeProvider(process.env.LLM_PROVIDER || 'developer');
+const FALLBACK_PROVIDER = normalizeProvider(process.env.LLM_PROVIDER_FALLBACK || '');
+
+const PRIMARY_MODEL = process.env.GEMINI_MODEL_PRIMARY || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const FALLBACK_MODEL = process.env.GEMINI_MODEL_FALLBACK || PRIMARY_MODEL;
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const VERTEX_AI_PROJECT = process.env.VERTEX_AI_PROJECT;
-const VERTEX_AI_LOCATION = process.env.VERTEX_AI_LOCATION;
+const VERTEX_AI_LOCATION = process.env.VERTEX_AI_LOCATION || 'us-central1';
 
-const providerClients = new Map();
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 25000);
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const getStatusCode = (error) => {
-  const rawStatus = error?.status ?? error?.code ?? error?.response?.status;
-  const status = Number(rawStatus);
-  return Number.isFinite(status) ? status : null;
-};
-
-const isTransientError = (error) => {
-  const status = getStatusCode(error);
-  if (status === 429 || (status !== null && status >= 500)) {
-    return true;
-  }
-
-  const message = (error?.message || '').toLowerCase();
-  const code = error?.code;
-  const networkCodes = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED'];
-  if (networkCodes.includes(code)) {
-    return true;
-  }
-
-  return message.includes('socket hang up') || message.includes('network') || message.includes('timeout');
-};
-
-const isLocationUnsupported = (error) => {
-  const message = (error?.message || '').toLowerCase();
-  if (!message.includes('location')) {
-    return false;
-  }
-  return (
-    message.includes('unsupported') ||
-    message.includes('not supported') ||
-    message.includes('not available') ||
-    message.includes('invalid location') ||
-    message.includes('not in the list')
-  );
-};
-
-const normalizeVertexResult = (result) => {
-  if (result?.response?.text instanceof Function) {
-    return result;
-  }
-
-  if (typeof result?.text === 'function') {
-    return {
-      ...result,
-      response: {
-        text: () => result.text(),
-      },
-    };
-  }
-
-  if (typeof result?.response?.text === 'string') {
-    const textValue = result.response.text;
-    return {
-      ...result,
-      response: {
-        ...result.response,
-        text: () => textValue,
-      },
-    };
-  }
-
-  const parts = result?.response?.candidates?.[0]?.content?.parts;
-  if (Array.isArray(parts)) {
-    const textValue = parts.map((part) => part.text || '').join('');
-    return {
-      ...result,
-      response: {
-        text: () => textValue,
-      },
-    };
-  }
-
-  return result;
-};
-
-const getProviderClient = (provider) => {
-  if (providerClients.has(provider)) {
-    return providerClients.get(provider);
-  }
-
-  let client;
+// validações mínimas
+function assertProviderEnv(provider) {
   if (provider === 'developer') {
     if (!GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY não configurada para o provider developer.');
+      throw new AppError(
+        'GOOGLE_API_KEY não configurada para provider "developer".',
+        500,
+        'LLM_CONFIG_ERROR'
+      );
     }
-    client = new GoogleGenerativeAI(GOOGLE_API_KEY);
-  } else if (provider === 'vertex') {
-    if (!VERTEX_AI_PROJECT || !VERTEX_AI_LOCATION) {
-      throw new Error('VERTEX_AI_PROJECT ou VERTEX_AI_LOCATION não configurados para o provider vertex.');
-    }
-    client = new GoogleGenAI({
-      vertexai: true,
-      project: VERTEX_AI_PROJECT,
-      location: VERTEX_AI_LOCATION,
-    });
-  } else {
-    throw new Error(`Provider LLM inválido: ${provider}`);
+    return;
   }
 
-  providerClients.set(provider, client);
-  return client;
-};
-
-const withRetry = async (operation, { maxRetries = 2 } = {}) => {
-  let attempt = 0;
-  while (true) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (isLocationUnsupported(error)) {
-        error.code = 'LLM_LOCATION_UNSUPPORTED';
-        throw error;
-      }
-
-      if (!isTransientError(error) || attempt >= maxRetries) {
-        throw error;
-      }
-
-      const backoffMs = 500 * Math.pow(2, attempt) + Math.floor(Math.random() * 150);
-      await sleep(backoffMs);
-      attempt += 1;
+  if (provider === 'vertex') {
+    if (!GOOGLE_API_KEY && (!VERTEX_AI_PROJECT || !VERTEX_AI_LOCATION)) {
+      throw new AppError(
+        'Configuração incompleta para provider "vertex". Defina GOOGLE_API_KEY (SDK novo) ou VERTEX_AI_PROJECT + VERTEX_AI_LOCATION.',
+        500,
+        'LLM_CONFIG_ERROR'
+      );
     }
+    return;
   }
-};
 
-const generateWithProvider = async ({ provider, model, prompt }) => {
-  const client = getProviderClient(provider);
+  throw new AppError(`Provider LLM inválido: ${provider}`, 500, 'LLM_CONFIG_ERROR');
+}
 
+assertProviderEnv(PRIMARY_PROVIDER);
+if (FALLBACK_PROVIDER) {
+  assertProviderEnv(FALLBACK_PROVIDER);
+}
+
+/**
+ * =========================================================
+ * Clients
+ * =========================================================
+ */
+let developerClient = null;
+let vertexClient = null;
+
+function getProviderClient(provider) {
   if (provider === 'developer') {
-    const generativeModel = client.getGenerativeModel({ model });
-    return withRetry(() => generativeModel.generateContent(prompt));
+    if (!developerClient) {
+      developerClient = new GoogleGenerativeAI(GOOGLE_API_KEY);
+    }
+    return { type: 'developer', client: developerClient };
   }
 
-  const generativeModel = client.getGenerativeModel({ model });
-  const result = await withRetry(() =>
-    generativeModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    })
-  );
+  if (provider === 'vertex') {
+    // Com @google/genai (requer configuração apropriada)
+    // Obs.: mantendo simples e compatível com API key quando possível.
+    if (!vertexClient) {
+      vertexClient = new GoogleGenAI({
+        apiKey: GOOGLE_API_KEY,
+        vertexai: true,
+        project: VERTEX_AI_PROJECT,
+        location: VERTEX_AI_LOCATION,
+      });
+    }
+    return { type: 'vertex', client: vertexClient };
+  }
 
-  return normalizeVertexResult(result);
-};
+  throw new AppError(`Provider LLM inválido: ${provider}`, 500, 'LLM_CONFIG_ERROR');
+}
 
-const getFallbackModel = (model) => FALLBACK_MODEL || model || PRIMARY_MODEL;
+/**
+ * =========================================================
+ * Core generation
+ * =========================================================
+ */
+async function generateWithProvider({ provider, model, prompt }) {
+  const { type, client } = getProviderClient(provider);
 
+  if (type === 'developer') {
+    const modelHandle = client.getGenerativeModel({ model });
+    const result = await withTimeout(modelHandle.generateContent(prompt), LLM_TIMEOUT_MS);
+    const text = result?.response?.text?.() ?? '';
+    return { text, raw: result };
+  }
+
+  if (type === 'vertex') {
+    // @google/genai style
+    const result = await withTimeout(
+      client.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      }),
+      LLM_TIMEOUT_MS
+    );
+
+    // normalização de texto
+    const text =
+      result?.text ||
+      result?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('') ||
+      '';
+
+    return { text, raw: result };
+  }
+
+  throw new AppError('Provider não suportado.', 500, 'LLM_CONFIG_ERROR');
+}
+
+async function generateWithFallback(prompt) {
+  try {
+    return await generateWithProvider({
+      provider: PRIMARY_PROVIDER,
+      model: PRIMARY_MODEL,
+      prompt,
+    });
+  } catch (primaryError) {
+    // localização não suportada -> erro sem fallback "mágico"
+    if (isLocationUnsupportedError(primaryError)) {
+      throw new AppError(
+        'Serviço de IA indisponível para esta localização no momento.',
+        503,
+        'LLM_LOCATION_UNSUPPORTED'
+      );
+    }
+
+    // se não há fallback, propaga
+    if (!FALLBACK_PROVIDER) {
+      throw primaryError;
+    }
+
+    // fallback só para erro recuperável
+    if (!isRetryableProviderError(primaryError)) {
+      throw primaryError;
+    }
+
+    try {
+      return await generateWithProvider({
+        provider: FALLBACK_PROVIDER,
+        model: FALLBACK_MODEL,
+        prompt,
+      });
+    } catch (fallbackError) {
+      if (isLocationUnsupportedError(fallbackError)) {
+        throw new AppError(
+          'Serviço de IA indisponível para esta localização no momento.',
+          503,
+          'LLM_LOCATION_UNSUPPORTED'
+        );
+      }
+      throw fallbackError;
+    }
+  }
+}
+
+/**
+ * =========================================================
+ * Compat layer for existing controllers
+ * Your code calls:
+ *   const model = genAI.getGenerativeModel({ model: geminiModelName });
+ *   const result = await model.generateContent(prompt);
+ *   const text = result.response.text();
+ * =========================================================
+ */
 export const genAI = {
   getGenerativeModel({ model }) {
+    const selectedModel = model || PRIMARY_MODEL;
     return {
-      generateContent: async (prompt) => {
-        const attempts = [
-          { provider: PRIMARY_PROVIDER, model: model || PRIMARY_MODEL },
-        ];
+      async generateContent(prompt) {
+        const { text, raw } = await generateWithFallback(prompt);
 
-        if (FALLBACK_PROVIDER || process.env.GEMINI_MODEL_FALLBACK) {
-          const fallbackProvider = FALLBACK_PROVIDER || PRIMARY_PROVIDER;
-          const fallbackModel = getFallbackModel(model);
-          if (
-            fallbackProvider !== attempts[0].provider ||
-            fallbackModel !== attempts[0].model
-          ) {
-            attempts.push({ provider: fallbackProvider, model: fallbackModel });
-          }
-        }
-
-        let lastError;
-
-        for (let index = 0; index < attempts.length; index += 1) {
-          const { provider, model: modelName } = attempts[index];
-          try {
-            return await generateWithProvider({ provider, model: modelName, prompt });
-          } catch (error) {
-            lastError = error;
-            if (index === attempts.length - 1) {
-              throw error;
-            }
-          }
-        }
-
-        throw lastError || new Error('Falha ao gerar conteúdo com o LLM.');
+        // resposta compatível com @google/generative-ai
+        return {
+          response: {
+            text: () => text,
+            raw,
+          },
+        };
       },
     };
   },
 };
 
+// Mantém compatibilidade com controllers existentes
 export const geminiModelName = PRIMARY_MODEL;
+
+// opcional para debug controlado
+export const llmConfig = {
+  primaryProvider: PRIMARY_PROVIDER,
+  fallbackProvider: FALLBACK_PROVIDER || null,
+  primaryModel: PRIMARY_MODEL,
+  fallbackModel: FALLBACK_MODEL,
+  timeoutMs: LLM_TIMEOUT_MS,
+};
