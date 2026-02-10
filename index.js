@@ -11,8 +11,11 @@ import oraclesRoutes from './routes/oraclesRoutes.js'; // Importa o router do Or
 import astrologyRoutes from './routes/astrologyRoutes.js'; // Importa o router do Astrologia
 import v1Routes from './routes/v1/index.js';
 import healthRoutes from './routes/healthRoutes.js';
+
 import { requestId } from './shared/http/requestId.js';
 import { errorHandler } from './shared/http/errorHandler.js';
+
+
 // Nota: A configuração do Gemini (`config/gemini.js`) é usada dentro dos controllers, não diretamente aqui.
 // Nota: O cliente Supabase (`config/supabaseClient.js`) é usado dentro dos controllers, não diretamente aqui.
 
@@ -58,7 +61,10 @@ app.use('/api/astrology', astrologyRoutes);
 app.use('/api/v1', v1Routes);
 app.use('/health', healthRoutes);
 
+
 app.use(errorHandler);
+
+
 
 // === Rota Raiz (Opcional) ===
 
