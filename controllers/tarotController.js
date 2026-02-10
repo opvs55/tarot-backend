@@ -219,10 +219,13 @@ export const generateTarotReading = async (req, res) => {
       return res.status(200).json({ interpretationType: 'simple', data: { mainInterpretation: rawText, cardInterpretations: [] } });
     }
 
-  } catch (error) {
-    console.error("LOG: Erro em generateTarotReading:", error);
-    return res.status(500).json({ error: 'Falha ao processar a leitura do Tarot.' });
-  }
+  } catch (error) {
+    console.error("LOG: Erro em generateTarotReading:", error);
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
+    return res.status(500).json({ error: 'Falha ao processar a leitura do Tarot.' });
+  }
 };
 
 // --- Lógica para o Chat ---
@@ -244,10 +247,13 @@ export const getChatResponse = async (req, res) => {
     const aiResponse = result.response.text();
     res.status(200).json({ aiResponse });
 
-  } catch (error) {
-    console.error("LOG: Erro em getChatResponse:", error);
-    res.status(500).json({ error: 'Falha ao processar a mensagem do chat.' });
-  }
+  } catch (error) {
+    console.error("LOG: Erro em getChatResponse:", error);
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
+    res.status(500).json({ error: 'Falha ao processar a mensagem do chat.' });
+  }
 };
 
 // --- Lógica para Significado Didático ---
@@ -268,8 +274,11 @@ export const getDidacticMeaning = async (req, res) => {
     const didacticText = result.response.text();
     res.status(200).json({ didacticText });
 
-  } catch (error) {
-    console.error("LOG: Erro em getDidacticMeaning:", error);
-    res.status(500).json({ error: 'Falha ao obter significado da carta.' });
-  }
+  } catch (error) {
+    console.error("LOG: Erro em getDidacticMeaning:", error);
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
+    res.status(500).json({ error: 'Falha ao obter significado da carta.' });
+  }
 };

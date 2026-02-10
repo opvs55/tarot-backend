@@ -141,6 +141,10 @@ export const getOrCalculateNumerology = async (req, res) => {
         }
       }
     } catch (aiError) {
+      if (aiError?.code === 'LLM_LOCATION_UNSUPPORTED') {
+        console.error('[Numerology Controller] Localização do LLM não suportada:', aiError);
+        return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+      }
       console.error(`[Numerology Controller] Erro CRÍTICO ao chamar Gemini para análise JSON:`, aiError);
       birthdaySecretMeaning = `{"error": "Erro ao gerar a análise: ${aiError.message || 'Falha na IA'}"}`; // Salva um JSON de erro
     }
@@ -200,6 +204,9 @@ export const getOrCalculateNumerology = async (req, res) => {
 
   } catch (error) {
     console.error("[Numerology Controller] ERRO GERAL CAPTURADO em getOrCalculateNumerology:", { message: error.message, stack: error.stack });
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
     return res.status(500).json({ error: error.message || 'Falha interna ao processar numerologia.' });
   }
 };
