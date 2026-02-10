@@ -9,7 +9,17 @@ import tarotRoutes from './routes/tarotRoutes.js'; // Importa o router do Tarot
 import numerologyRoutes from './routes/numerologyRoutes.js'; // Importa o router da Numerologia
 import oraclesRoutes from './routes/oraclesRoutes.js'; // Importa o router do Oráculos
 import astrologyRoutes from './routes/astrologyRoutes.js'; // Importa o router do Astrologia
+
 import { generateWeeklyAstrologyTheme } from './controllers/astrologyController.js';
+
+import v1Routes from './routes/v1/index.js';
+import healthRoutes from './routes/healthRoutes.js';
+
+import { requestId } from './shared/http/requestId.js';
+import { errorHandler } from './shared/http/errorHandler.js';
+
+
+
 // Nota: A configuração do Gemini (`config/gemini.js`) é usada dentro dos controllers, não diretamente aqui.
 // Nota: O cliente Supabase (`config/supabaseClient.js`) é usado dentro dos controllers, não diretamente aqui.
 
@@ -29,6 +39,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); 
 // Habilita o parseamento de corpos de requisição JSON
 app.use(express.json()); 
+app.use(requestId);
 
 // === Montagem das Rotas ===
 
@@ -52,8 +63,17 @@ app.use('/api/oracles', oraclesRoutes);
 // serão acessíveis a partir de /api/astrology/...
 app.use('/api/astrology', astrologyRoutes);
 
+
 // Alias para compatibilidade com clientes antigos
 app.post('/api/astral-chart', generateWeeklyAstrologyTheme);
+
+app.use('/api/v1', v1Routes);
+app.use('/health', healthRoutes);
+
+
+app.use(errorHandler);
+
+
 
 // === Rota Raiz (Opcional) ===
 

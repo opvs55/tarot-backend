@@ -108,6 +108,9 @@ EXEMPLO DE TOM
     }
   } catch (error) {
     console.error('[Oracles Controller] Erro ao gerar leitura semanal:', error);
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
     return res.status(500).json({ error: 'Falha ao processar a leitura semanal.' });
   }
 };

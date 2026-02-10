@@ -74,6 +74,12 @@ export const generateWeeklyAstrologyTheme = async (req, res) => {
     }
   } catch (error) {
     console.error('[Astrology Controller] Erro ao gerar tema astral semanal:', error);
+
+
+    if (error?.code === 'LLM_LOCATION_UNSUPPORTED') {
+      return res.status(503).json({ error: 'Serviço de IA indisponível na localização configurada.' });
+    }
+
     return res.status(500).json({ error: 'Falha ao processar o tema astral semanal.' });
   }
 };

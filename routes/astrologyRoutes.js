@@ -6,7 +6,10 @@ const router = Router();
 
 router.get('/', generateWeeklyAstrologyTheme);
 router.post('/', generateWeeklyAstrologyTheme);
+
 router.get('/weekly', generateWeeklyAstrologyTheme);
 router.post('/weekly', generateWeeklyAstrologyTheme);
+
+
 
 export default router;
