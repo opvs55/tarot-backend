@@ -7,8 +7,10 @@ import dotenv from 'dotenv';
 import { corsOptions } from './config/cors.js'; // Importa a configuração do CORS
 import tarotRoutes from './routes/tarotRoutes.js'; // Importa o router do Tarot
 import numerologyRoutes from './routes/numerologyRoutes.js'; // Importa o router da Numerologia
+
 import v1Routes from './routes/v1/index.js';
 import healthRoutes from './routes/healthRoutes.js';
+
 // Nota: A configuração do Gemini (`config/gemini.js`) é usada dentro dos controllers, não diretamente aqui.
 // Nota: O cliente Supabase (`config/supabaseClient.js`) é usado dentro dos controllers, não diretamente aqui.
 
@@ -41,11 +43,13 @@ app.use('/api/tarot', tarotRoutes);
 // serão acessíveis a partir de /api/numerology/...
 app.use('/api/numerology', numerologyRoutes);
 
+
 // Rotas versionadas (v1)
 app.use('/api/v1', v1Routes);
 
 // Healthcheck
 app.use('/health', healthRoutes);
+
 
 // === Rota Raiz (Opcional) ===
 
@@ -60,5 +64,9 @@ app.get('/', (req, res) => {
 // Faz a aplicação Express "ouvir" na porta definida
 app.listen(PORT, '0.0.0.0', () => {
   // Exibe uma mensagem no console quando o servidor inicia com sucesso
+
   console.log(`Servidor iniciado na porta ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
+
+  console.log(`✨ Servidor Oráculo IA (Refatorado) rodando em http://localhost:${PORT}`);
+
 });
