@@ -15,4 +15,4 @@ export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 // 2. Define o modelo
 // Usamos o 'gemini-1.5-flash' porque ele é rápido e funciona em todas as regiões do Render.
-export const geminiModelName = 'gemini-2.5-flash';
+export const geminiModelName = 'gemini-2.0-flash';
