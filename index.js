@@ -14,15 +14,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// === 1. CORS DEVE VIR PRIMEIRO ===
+// === 1. CORS (Primeiro de tudo) ===
 app.use(cors(corsOptions));
-// Garante que requisições OPTIONS (preflight) sejam respondidas
 app.options('*', cors(corsOptions));
 
-// === 2. DEPOIS O JSON ===
+// === 2. JSON ===
 app.use(express.json());
 
-// === 3. DEPOIS AS ROTAS ===
+// === 3. Rotas ===
+// Nota: O teu frontend está a chamar /api/v1/tarot/readings
+// Certifica-te que 'v1Routes' tem a rota do tarot dentro dele.
 app.use('/api/tarot', tarotRoutes);
 app.use('/api/numerology', numerologyRoutes);
 app.use('/api/v1', v1Routes);
@@ -33,7 +34,7 @@ app.get('/', (req, res) => {
   res.send('Servidor Oráculo IA está Online!');
 });
 
-// Iniciar servidor ouvindo em 0.0.0.0 (Obrigatório para Render)
+// Iniciar Servidor (0.0.0.0 é obrigatório para o Render)
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✨ Servidor rodando na porta ${PORT}`);
 });
