@@ -13,4 +13,4 @@ if (!process.env.GOOGLE_API_KEY) {
 export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 // O modelo que definiste
-export const geminiModelName = 'gemini-3.0-flash';
+export const geminiModelName = 'gemini-3-flash-preview';
